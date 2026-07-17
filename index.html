@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa interactivo</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div id="loading">Cargando barrios de Barcelona…</div>
+<div id="filter">
+  <label for="category-filter">Categoría</label>
+  <select id="category-filter">
+    <option value="all">Todas</option>
+  </select>
+</div>
+<div id="map"></div>
+<div id="legend" aria-label="Leyenda de categorías"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
