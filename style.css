@@ -1,0 +1,154 @@
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  font-family: system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: #888;
+  letter-spacing: 0.02em;
+}
+
+#loading.hidden {
+  display: none;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff
+  ;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  background: #fafafa;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+  background: #fafafa;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 16px !important;
+  margin-left: 16px !important;
+}
+
+.leaflet-control-zoom a {
+  color: #999 !important;
+  background: transparent !important;
+  border: 1px solid #e0e0e0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 26px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  color: #555 !important;
+  background: #f0f0f0 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.popup-category {
+  color: #666;
+  font-size: 12px;
+}
+
+.popup-missing {
+  color: #aaa;
+  font-size: 12px;
+  font-style: italic;
+}
+
+#filter {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  font-family: system-ui, sans-serif;
+}
+
+#filter label {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 0.02em;
+}
+
+#category-filter {
+  min-width: 220px;
+  padding: 6px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#category-filter:focus {
+  outline: none;
+  border-color: #bbb;
+}
+
+#legend {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: #666;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

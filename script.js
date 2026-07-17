@@ -1,0 +1,324 @@
+const POLYGONS_URL = "0301100100_UNITATS_ADM_POLIGONS.json";
+const CSV_URL = "datos.csv";
+
+const CATEGORY_COLORS = {
+  1: "#B2182B",
+  2: "#EF8A62",
+  3: "#FDCC8A",
+  4: "#D9F0D3",
+  5: "#78C679",
+  6: "#238443",
+};
+
+let currentCategoryFilter = "all";
+let barriLayerRef = null;
+let referenceLayerRef = null;
+let mapRef = null;
+
+proj4.defs(
+  "EPSG:25831",
+  "+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+);
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n" || char === "\r") {
+      if (char === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell);
+      cell = "";
+      if (row.some((value) => value.length > 0)) rows.push(row);
+      row = [];
+    } else {
+      cell += char;
+    }
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+    if (row.some((value) => value.length > 0)) rows.push(row);
+  }
+
+  return rows;
+}
+
+function loadBarrioData(csvText) {
+  const rows = parseCSV(csvText.trim());
+  const header = rows.shift();
+  const barriIndex = header.indexOf("BARRI");
+  const valorIndex = header.indexOf("VALOR");
+  const categoriaIndex = header.indexOf("CATEGORIA");
+  const dataByBarri = {};
+
+  rows.forEach((row) => {
+    const barri = row[barriIndex]?.trim();
+    const valor = Number(row[valorIndex]);
+    const categoria = row[categoriaIndex]?.trim();
+
+    if (barri) {
+      dataByBarri[barri] = { valor, categoria };
+    }
+  });
+
+  return dataByBarri;
+}
+
+function getBarrioData(dataByBarri, nom) {
+  return (
+    dataByBarri[nom] ||
+    dataByBarri[nom?.trim()] ||
+    null
+  );
+}
+
+function getCategoryStyle(valor, hovered = false) {
+  return {
+    color: hovered ? "#C8C8C8" : "#E0E0E0",
+    opacity: 1,
+    weight: 1,
+    fillColor: CATEGORY_COLORS[valor] || "#ddd",
+    fillOpacity: hovered ? 0.9 : 0.75,
+    interactive: true,
+  };
+}
+
+function getHiddenStyle() {
+  return {
+    color: "#000",
+    opacity: 0,
+    weight: 0,
+    fillOpacity: 0,
+    interactive: false,
+  };
+}
+
+function getReferenceStyle() {
+  return {
+    color: "#FFFFFF",
+    opacity: 1,
+    weight: 1,
+    fillColor: "#E0E0E0",
+    fillOpacity: 1,
+    interactive: false,
+  };
+}
+
+function isLayerVisible(barrioData) {
+  if (currentCategoryFilter === "all") return true;
+  return String(barrioData?.valor) === currentCategoryFilter;
+}
+
+function applyLayerStyle(layer, hovered = false) {
+  const barrioData = layer.barrioData;
+
+  if (!isLayerVisible(barrioData)) {
+    layer.setStyle(getHiddenStyle());
+    return;
+  }
+
+  layer.setStyle(getCategoryStyle(barrioData?.valor, hovered));
+}
+
+function applyCategoryFilter() {
+  if (!barriLayerRef) return;
+
+  if (referenceLayerRef && mapRef) {
+    if (currentCategoryFilter === "all") {
+      mapRef.removeLayer(referenceLayerRef);
+    } else {
+      if (!mapRef.hasLayer(referenceLayerRef)) {
+        referenceLayerRef.addTo(mapRef);
+      }
+      barriLayerRef.bringToFront();
+    }
+  }
+
+  barriLayerRef.eachLayer((layer) => {
+    applyLayerStyle(layer);
+  });
+}
+
+function buildCategoryFilter(dataByBarri) {
+  const select = document.getElementById("category-filter");
+  const categories = {};
+
+  Object.values(dataByBarri).forEach(({ valor, categoria }) => {
+    categories[valor] = categoria;
+  });
+
+  Object.keys(categories)
+    .sort((a, b) => Number(a) - Number(b))
+    .forEach((valor) => {
+      const option = document.createElement("option");
+      option.value = valor;
+      option.textContent = `${valor} · ${categories[valor]}`;
+      select.appendChild(option);
+    });
+
+  select.addEventListener("change", (event) => {
+    currentCategoryFilter = event.target.value;
+    applyCategoryFilter();
+  });
+}
+
+function buildPopupContent(nom, barrioData) {
+  if (!barrioData) {
+    return `<strong>${nom}</strong><br><span class="popup-missing">Sin datos</span>`;
+  }
+
+  return `<strong>${nom}</strong><br><span class="popup-category">${barrioData.categoria}</span>`;
+}
+
+function buildLegend() {
+  const legend = document.getElementById("legend");
+  legend.innerHTML = "";
+
+  Object.entries(CATEGORY_COLORS).forEach(([valor, color]) => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span><span>${valor}</span>`;
+    legend.appendChild(item);
+  });
+}
+
+function reprojectCoords(coords) {
+  if (typeof coords[0] === "number") {
+    return proj4("EPSG:25831", "EPSG:4326", coords);
+  }
+  return coords.map(reprojectCoords);
+}
+
+function reprojectFeature(feature) {
+  return {
+    type: "Feature",
+    properties: feature.properties,
+    geometry: {
+      type: feature.geometry.type,
+      coordinates: reprojectCoords(feature.geometry.coordinates),
+    },
+  };
+}
+
+function filterBarrios(data) {
+  return {
+    type: "FeatureCollection",
+    features: data.features
+      .filter((feature) => feature.properties.TIPUS_UA === "BARRI")
+      .map(reprojectFeature),
+  };
+}
+
+function hideLoading() {
+  document.getElementById("loading").classList.add("hidden");
+}
+
+function initMap() {
+  if (typeof L === "undefined" || typeof proj4 === "undefined") {
+    document.getElementById("loading").textContent =
+      "No se pudieron cargar las librerías del mapa. Comprueba tu conexión a internet.";
+    return;
+  }
+
+  const map = L.map("map", {
+    zoomControl: false,
+    scrollWheelZoom: true,
+    attributionControl: false,
+  }).setView([41.387, 2.17], 12);
+
+  L.control.zoom({ position: "bottomleft" }).addTo(map);
+
+  mapRef = map;
+
+  Promise.all([
+    fetch(POLYGONS_URL).then((response) => {
+      if (!response.ok) throw new Error("No se encontró el archivo de polígonos");
+      return response.json();
+    }),
+    fetch(CSV_URL).then((response) => {
+      if (!response.ok) throw new Error("No se encontró datos.csv");
+      return response.text();
+    }),
+  ])
+    .then(([polygonsData, csvText]) => {
+      const dataByBarri = loadBarrioData(csvText);
+      const barriPolygons = filterBarrios(polygonsData);
+
+      buildLegend();
+      buildCategoryFilter(dataByBarri);
+
+      referenceLayerRef = L.geoJSON(barriPolygons, {
+        style: getReferenceStyle,
+        interactive: false,
+      });
+
+      barriLayerRef = L.geoJSON(barriPolygons, {
+        style(feature) {
+          const barrioData = getBarrioData(dataByBarri, feature.properties.NOM);
+          return isLayerVisible(barrioData)
+            ? getCategoryStyle(barrioData?.valor)
+            : getHiddenStyle();
+        },
+        onEachFeature(feature, layer) {
+          const nom = feature.properties.NOM || "Barrio";
+          const barrioData = getBarrioData(dataByBarri, nom);
+
+          layer.barrioData = barrioData;
+          layer.bindPopup(buildPopupContent(nom, barrioData));
+
+          layer.on("mouseover", () => {
+            if (!isLayerVisible(barrioData)) return;
+            applyLayerStyle(layer, true);
+          });
+
+          layer.on("mouseout", () => {
+            applyLayerStyle(layer);
+          });
+        },
+      }).addTo(map);
+
+      map.fitBounds(barriLayerRef.getBounds(), { padding: [20, 20] });
+      hideLoading();
+    })
+    .catch((error) => {
+      document.getElementById("loading").textContent =
+        "Error al cargar los datos: " +
+        error.message +
+        ". Abre la página con un servidor local (no con doble clic).";
+      console.error(error);
+    });
+
+  window.addEventListener("load", () => {
+    map.invalidateSize();
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initMap);
+} else {
+  initMap();
+}
