@@ -284,15 +284,20 @@ function refreshMapLayout() {
   if (!mapRef || !barriLayerRef) return;
 
   mapRef.invalidateSize();
-  mapRef.fitBounds(barriLayerRef.getBounds(), { padding: [10, 10] });
+  mapRef.fitBounds(barriLayerRef.getBounds(), { padding: [20, 20] });
 }
 
 function scheduleMapRefresh() {
   clearTimeout(mapRefreshTimer);
-  mapRefreshTimer = setTimeout(refreshMapLayout, 100);
+  mapRefreshTimer = setTimeout(() => {
+    requestAnimationFrame(refreshMapLayout);
+  }, 100);
 }
 
 function initMapResizeHandling() {
+  const appElement = document.getElementById("app");
+  const filterPanel = document.getElementById("filter-panel");
+  const mainElement = document.getElementById("main");
   const mapElement = document.getElementById("map");
 
   window.addEventListener("resize", scheduleMapRefresh);
@@ -300,6 +305,9 @@ function initMapResizeHandling() {
 
   if (typeof ResizeObserver !== "undefined") {
     mapResizeObserver = new ResizeObserver(scheduleMapRefresh);
+    mapResizeObserver.observe(appElement);
+    mapResizeObserver.observe(filterPanel);
+    mapResizeObserver.observe(mainElement);
     mapResizeObserver.observe(mapElement);
   }
 }
