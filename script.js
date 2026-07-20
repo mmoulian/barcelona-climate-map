@@ -5,10 +5,31 @@ const CATEGORY_COLORS = {
   1: "#B2182B",
   2: "#EF8A62",
   3: "#FDCC8A",
-  4: "#D9F0D3",
-  5: "#78C679",
+  4: "#AED581",
+  5: "#7CB342",
   6: "#238443",
 };
+
+const FILTER_GROUPS = [
+  {
+    label: "Vulnerable:",
+    className: "filter-row--vulnerable",
+    items: [
+      { valor: 1, label: "Alto estrés térmico" },
+      { valor: 2, label: "Medio estrés térmico" },
+      { valor: 3, label: "Bajo estrés térmico" },
+    ],
+  },
+  {
+    label: "No vulnerable:",
+    className: "filter-row--no-vulnerable",
+    items: [
+      { valor: 4, label: "Alto estrés térmico" },
+      { valor: 5, label: "Medio estrés térmico" },
+      { valor: 6, label: "Bajo estrés térmico" },
+    ],
+  },
+];
 
 let currentCategoryFilter = "all";
 let barriLayerRef = null;
@@ -98,7 +119,7 @@ function getBarrioData(dataByBarri, nom) {
 
 function getCategoryStyle(valor, hovered = false) {
   return {
-    color: hovered ? "#C8C8C8" : "#E0E0E0",
+    color: "#FFFFFF",
     opacity: 1,
     weight: 1,
     fillColor: CATEGORY_COLORS[valor] || "#ddd",
@@ -144,8 +165,19 @@ function applyLayerStyle(layer, hovered = false) {
   layer.setStyle(getCategoryStyle(barrioData?.valor, hovered));
 }
 
+function updateFilterUI() {
+  document.querySelectorAll(".filter-chip").forEach((chip) => {
+    chip.classList.toggle(
+      "is-active",
+      chip.dataset.category === currentCategoryFilter
+    );
+  });
+}
+
 function applyCategoryFilter() {
   if (!barriLayerRef) return;
+
+  updateFilterUI();
 
   if (referenceLayerRef && mapRef) {
     if (currentCategoryFilter === "all") {
@@ -163,25 +195,46 @@ function applyCategoryFilter() {
   });
 }
 
-function buildCategoryFilter(dataByBarri) {
-  const select = document.getElementById("category-filter");
-  const categories = {};
+function buildCategoryFilter() {
+  const filter = document.getElementById("filter");
+  filter.innerHTML = "";
 
-  Object.values(dataByBarri).forEach(({ valor, categoria }) => {
-    categories[valor] = categoria;
-  });
+  FILTER_GROUPS.forEach((group) => {
+    const row = document.createElement("div");
+    row.className = `filter-row ${group.className}`;
 
-  Object.keys(categories)
-    .sort((a, b) => Number(a) - Number(b))
-    .forEach((valor) => {
-      const option = document.createElement("option");
-      option.value = valor;
-      option.textContent = `${valor} · ${categories[valor]}`;
-      select.appendChild(option);
+    const label = document.createElement("div");
+    label.className = "filter-row-label";
+    label.textContent = group.label;
+    row.appendChild(label);
+
+    group.items.forEach((item) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "filter-chip";
+      chip.dataset.category = String(item.valor);
+      chip.innerHTML = `
+        <span class="filter-chip-dot" style="background:${CATEGORY_COLORS[item.valor]}"></span>
+        <span class="filter-chip-label">${item.label}</span>
+      `;
+
+      chip.addEventListener("click", () => {
+        const category = String(item.valor);
+        currentCategoryFilter =
+          currentCategoryFilter === category ? "all" : category;
+        applyCategoryFilter();
+      });
+
+      row.appendChild(chip);
     });
 
-  select.addEventListener("change", (event) => {
-    currentCategoryFilter = event.target.value;
+    filter.appendChild(row);
+  });
+}
+
+function initResetFilter() {
+  document.getElementById("reset-filter").addEventListener("click", () => {
+    currentCategoryFilter = "all";
     applyCategoryFilter();
   });
 }
@@ -192,18 +245,6 @@ function buildPopupContent(nom, barrioData) {
   }
 
   return `<strong>${nom}</strong><br><span class="popup-category">${barrioData.categoria}</span>`;
-}
-
-function buildLegend() {
-  const legend = document.getElementById("legend");
-  legend.innerHTML = "";
-
-  Object.entries(CATEGORY_COLORS).forEach(([valor, color]) => {
-    const item = document.createElement("div");
-    item.className = "legend-item";
-    item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span><span>${valor}</span>`;
-    legend.appendChild(item);
-  });
 }
 
 function reprojectCoords(coords) {
@@ -246,11 +287,14 @@ function initMap() {
 
   const map = L.map("map", {
     zoomControl: false,
-    scrollWheelZoom: true,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    touchZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    dragging: false,
     attributionControl: false,
   }).setView([41.387, 2.17], 12);
-
-  L.control.zoom({ position: "bottomleft" }).addTo(map);
 
   mapRef = map;
 
@@ -268,8 +312,8 @@ function initMap() {
       const dataByBarri = loadBarrioData(csvText);
       const barriPolygons = filterBarrios(polygonsData);
 
-      buildLegend();
-      buildCategoryFilter(dataByBarri);
+      buildCategoryFilter();
+      initResetFilter();
 
       referenceLayerRef = L.geoJSON(barriPolygons, {
         style: getReferenceStyle,
@@ -301,8 +345,9 @@ function initMap() {
         },
       }).addTo(map);
 
-      map.fitBounds(barriLayerRef.getBounds(), { padding: [20, 20] });
+      map.fitBounds(barriLayerRef.getBounds(), { padding: [10, 10] });
       hideLoading();
+      map.invalidateSize();
     })
     .catch((error) => {
       document.getElementById("loading").textContent =
@@ -313,6 +358,10 @@ function initMap() {
     });
 
   window.addEventListener("load", () => {
+    map.invalidateSize();
+  });
+
+  window.addEventListener("resize", () => {
     map.invalidateSize();
   });
 }

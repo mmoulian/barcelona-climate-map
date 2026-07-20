@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mapa interactivo</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,14 +15,19 @@
 <body>
 
 <div id="loading">Cargando barrios de Barcelona…</div>
-<div id="filter">
-  <label for="category-filter">Categoría</label>
-  <select id="category-filter">
-    <option value="all">Todas</option>
-  </select>
+
+<div id="app">
+  <div id="filter-panel">
+    <div id="filter" aria-label="Filtro por categoría"></div>
+    <button id="reset-filter" type="button" class="reset-filter" aria-label="Ver todos los barrios">
+      <img src="imgs/autorenew.svg" alt="" class="reset-filter-icon" width="24" height="24">
+      <span class="reset-filter-label">Ver todos</span>
+    </button>
+  </div>
+  <main id="main">
+    <div id="map"></div>
+  </main>
 </div>
-<div id="map"></div>
-<div id="legend" aria-label="Leyenda de categorías"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
