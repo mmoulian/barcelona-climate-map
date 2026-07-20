@@ -35,6 +35,8 @@ let currentCategoryFilter = "all";
 let barriLayerRef = null;
 let referenceLayerRef = null;
 let mapRef = null;
+let mapResizeObserver = null;
+let mapRefreshTimer = null;
 
 proj4.defs(
   "EPSG:25831",
@@ -278,6 +280,30 @@ function hideLoading() {
   document.getElementById("loading").classList.add("hidden");
 }
 
+function refreshMapLayout() {
+  if (!mapRef || !barriLayerRef) return;
+
+  mapRef.invalidateSize();
+  mapRef.fitBounds(barriLayerRef.getBounds(), { padding: [10, 10] });
+}
+
+function scheduleMapRefresh() {
+  clearTimeout(mapRefreshTimer);
+  mapRefreshTimer = setTimeout(refreshMapLayout, 100);
+}
+
+function initMapResizeHandling() {
+  const mapElement = document.getElementById("map");
+
+  window.addEventListener("resize", scheduleMapRefresh);
+  window.addEventListener("orientationchange", scheduleMapRefresh);
+
+  if (typeof ResizeObserver !== "undefined") {
+    mapResizeObserver = new ResizeObserver(scheduleMapRefresh);
+    mapResizeObserver.observe(mapElement);
+  }
+}
+
 function initMap() {
   if (typeof L === "undefined" || typeof proj4 === "undefined") {
     document.getElementById("loading").textContent =
@@ -345,9 +371,9 @@ function initMap() {
         },
       }).addTo(map);
 
-      map.fitBounds(barriLayerRef.getBounds(), { padding: [10, 10] });
+      initMapResizeHandling();
       hideLoading();
-      map.invalidateSize();
+      refreshMapLayout();
     })
     .catch((error) => {
       document.getElementById("loading").textContent =
@@ -356,14 +382,6 @@ function initMap() {
         ". Abre la página con un servidor local (no con doble clic).";
       console.error(error);
     });
-
-  window.addEventListener("load", () => {
-    map.invalidateSize();
-  });
-
-  window.addEventListener("resize", () => {
-    map.invalidateSize();
-  });
 }
 
 if (document.readyState === "loading") {
