@@ -2,6 +2,8 @@
   --layout-max-width: 100%;
   --filter-max-width: 850px;
   --page-gutter: 20px;
+  --btn-hover-bg: #cfcfcf;
+  --btn-active-bg: #757575;
 }
 
 #loading {
@@ -84,38 +86,106 @@ body {
   background: #fafafa;
 }
 
-.filter-row-label {
-  color: #616161;
-  font-size: 16px;
-  font-weight: 400;
-  letter-spacing: 0.18px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
+.filter-group-btn,
 .filter-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  margin: 0;
   padding: 8px 16px;
   border: none;
   border-radius: 30px;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s ease;
   flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 
+.filter-group-btn::before,
+.filter-chip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--btn-hover-bg);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.28s ease;
+  z-index: -1;
+}
+
+.filter-group-btn-label,
+.filter-group-btn > *,
+.filter-chip > * {
+  position: relative;
+  z-index: 1;
+}
+
+.filter-group-btn {
+  color: #616161;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.18px;
+  text-align: center;
+  width: 152px;
+  white-space: nowrap;
+}
+
+.filter-group-btn-label {
+  color: #616161;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.18px;
+  text-align: center;
+  white-space: nowrap;
+  transition: color 0.16s ease;
+}
+
+.filter-group-btn.is-active,
 .filter-chip.is-active {
-  background: rgba(232, 232, 232, 0.7);
+  color: #ffffff;
   outline: 1px solid #e8e8e8;
   outline-offset: -1px;
 }
 
-.filter-chip:hover:not(.is-active) {
-  background: rgba(232, 232, 232, 0.35);
+.filter-group-btn.is-active .filter-group-btn-label,
+.filter-chip.is-active .filter-chip-label {
+  color: #ffffff;
+}
+
+.filter-group-btn:active,
+.filter-chip:active,
+.reset-filter:active {
+  color: #ffffff;
+}
+
+.filter-group-btn:active .filter-group-btn-label,
+.filter-chip:active .filter-chip-label {
+  color: #ffffff;
+}
+
+.filter-group-btn.is-active::before,
+.filter-chip.is-active::before {
+  background: var(--btn-active-bg);
+  transform: scaleX(1);
+}
+
+.filter-group-btn:hover:not(.is-active)::before,
+.filter-chip:hover:not(.is-active)::before {
+  transform: scaleX(1);
+}
+
+.filter-group-btn:active:not(.is-active)::before,
+.filter-chip:active:not(.is-active)::before {
+  background: var(--btn-active-bg);
+  transform: scaleX(1);
+  transition-duration: 0.16s;
 }
 
 .filter-chip-dot {
@@ -131,10 +201,11 @@ body {
   font-weight: 400;
   text-align: center;
   white-space: nowrap;
+  transition: color 0.16s ease;
 }
 
 .reset-filter {
-  margin: 0;
+  margin: 20px 0 0;
   padding: 6px 10px;
   border: none;
   border-radius: 100px;
@@ -144,11 +215,49 @@ body {
   gap: 4px;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s ease;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: #616161;
+  transition: color 0.16s ease;
 }
 
-.reset-filter:hover {
-  background: rgba(232, 232, 232, 0.35);
+.reset-filter::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--btn-hover-bg);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.28s ease;
+  z-index: -1;
+}
+
+.reset-filter > * {
+  position: relative;
+  z-index: 1;
+}
+
+.reset-filter.is-active {
+  color: #ffffff;
+  outline: 1px solid #e8e8e8;
+  outline-offset: -1px;
+}
+
+.reset-filter.is-active::before {
+  background: var(--btn-active-bg);
+  transform: scaleX(1);
+}
+
+.reset-filter:hover:not(.is-active)::before {
+  transform: scaleX(1);
+}
+
+.reset-filter:active:not(.is-active)::before {
+  background: var(--btn-active-bg);
+  transform: scaleX(1);
+  transition-duration: 0.16s;
 }
 
 .reset-filter-icon {
@@ -156,10 +265,13 @@ body {
   height: 24px;
   flex-shrink: 0;
   display: block;
+  background-color: currentColor;
+  mask: url("imgs/autorenew.svg") center / contain no-repeat;
+  -webkit-mask: url("imgs/autorenew.svg") center / contain no-repeat;
 }
 
 .reset-filter-label {
-  color: #616161;
+  color: inherit;
   font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.18px;
@@ -205,7 +317,8 @@ body {
   line-height: 1.4;
 }
 
-.popup-category {
+.popup-category,
+.popup-postal {
   color: #666;
   font-size: 12px;
 }
@@ -223,13 +336,18 @@ body {
     gap: 12px;
   }
 
+  .filter-group-btn,
   .filter-chip {
     padding: 6px 14px;
+  }
+
+  .filter-group-btn {
+    width: 140px;
   }
 }
 
 @media (max-width: 900px) {
-  .filter-row-label {
+  .filter-group-btn {
     width: 100%;
   }
 
@@ -252,12 +370,18 @@ body {
     gap: 10px;
   }
 
+  .filter-group-btn,
   .filter-chip {
     padding: 6px 12px;
   }
 
+  .filter-group-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
   .filter-chip-label,
-  .filter-row-label,
+  .filter-group-btn-label,
   .reset-filter-label {
     font-size: 14px;
   }
@@ -276,12 +400,18 @@ body {
     padding: 6px 12px;
   }
 
+  .filter-group-btn,
   .filter-chip {
     padding: 6px 12px;
   }
 
+  .filter-group-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
   .filter-chip-label,
-  .filter-row-label,
+  .filter-group-btn-label,
   .reset-filter-label {
     font-size: 13px;
   }

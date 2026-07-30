@@ -1,17 +1,18 @@
 const POLYGONS_URL = "0301100100_UNITATS_ADM_POLIGONS.json";
-const CSV_URL = "datos.csv";
+const CSV_URL = "datos2.csv?v=6";
 
 const CATEGORY_COLORS = {
-  1: "#B2182B",
-  2: "#EF8A62",
-  3: "#FDCC8A",
-  4: "#AED581",
-  5: "#7CB342",
-  6: "#238443",
+  1: "#E53935",
+  2: "#EF5350",
+  3: "#EF9A9A",
+  4: "#FB8C00",
+  5: "#FFA726",
+  6: "#FFCC80",
 };
 
 const FILTER_GROUPS = [
   {
+    id: "vulnerable",
     label: "Vulnerable:",
     className: "filter-row--vulnerable",
     items: [
@@ -21,6 +22,7 @@ const FILTER_GROUPS = [
     ],
   },
   {
+    id: "no-vulnerable",
     label: "No vulnerable:",
     className: "filter-row--no-vulnerable",
     items: [
@@ -43,7 +45,7 @@ proj4.defs(
   "+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 );
 
-function parseCSV(text) {
+function parseCSV(text, delimiter = ",") {
   const rows = [];
   let row = [];
   let cell = "";
@@ -68,7 +70,7 @@ function parseCSV(text) {
 
     if (char === '"') {
       inQuotes = true;
-    } else if (char === ",") {
+    } else if (char === delimiter) {
       row.push(cell);
       cell = "";
     } else if (char === "\n" || char === "\r") {
@@ -90,21 +92,69 @@ function parseCSV(text) {
   return rows;
 }
 
+function detectCsvDelimiter(text) {
+  const header = text.trim().split(/\r?\n/)[0] || "";
+  return header.includes(";") ? ";" : ",";
+}
+
+function normalizeBarriName(name) {
+  return (
+    name
+      ?.trim()
+      .toLocaleLowerCase("ca")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[-·]/g, " ")
+      .replace(/\s+/g, " ") || ""
+  );
+}
+
+function categoriaToValor(categoria) {
+  const text = categoria?.trim().toLocaleLowerCase("ca") || "";
+  const isVulnerable = text.includes("vulnerable") && !text.includes("no vulnerable");
+  const isNoVulnerable = text.includes("no vulnerable");
+
+  let nivel = 0;
+  if (text.includes("alto") || text.includes("alt ")) nivel = 1;
+  else if (text.includes("medio")) nivel = 2;
+  else if (text.includes("bajo")) nivel = 3;
+
+  if (isVulnerable && nivel) return nivel;
+  if (isNoVulnerable && nivel) return nivel + 3;
+
+  const valor = Number(text);
+  return Number.isFinite(valor) && valor >= 1 && valor <= 6 ? valor : NaN;
+}
+
 function loadBarrioData(csvText) {
-  const rows = parseCSV(csvText.trim());
+  const delimiter = detectCsvDelimiter(csvText);
+  const rows = parseCSV(csvText.trim(), delimiter);
   const header = rows.shift();
   const barriIndex = header.indexOf("BARRI");
   const valorIndex = header.indexOf("VALOR");
   const categoriaIndex = header.indexOf("CATEGORIA");
+  const codigoIndex = header.findIndex((column) =>
+    /^CODIGO(\s+POSTAL)?$/i.test(column.trim())
+  );
   const dataByBarri = {};
 
   rows.forEach((row) => {
     const barri = row[barriIndex]?.trim();
-    const valor = Number(row[valorIndex]);
     const categoria = row[categoriaIndex]?.trim();
+    const codigo = codigoIndex >= 0 ? row[codigoIndex]?.trim() : "";
+    const valorFromColumn =
+      valorIndex >= 0 ? Number(row[valorIndex]) : categoriaToValor(categoria);
+    const valor = Number.isFinite(valorFromColumn)
+      ? valorFromColumn
+      : categoriaToValor(categoria);
 
-    if (barri) {
-      dataByBarri[barri] = { valor, categoria };
+    if (barri && Number.isFinite(valor)) {
+      dataByBarri[normalizeBarriName(barri)] = {
+        valor,
+        categoria,
+        codigo,
+        barri,
+      };
     }
   });
 
@@ -112,29 +162,48 @@ function loadBarrioData(csvText) {
 }
 
 function getBarrioData(dataByBarri, nom) {
-  return (
-    dataByBarri[nom] ||
-    dataByBarri[nom?.trim()] ||
-    null
-  );
+  return dataByBarri[normalizeBarriName(nom)] || null;
+}
+
+function lightenColor(hex, mix = 0.22) {
+  const color = hex.replace("#", "");
+  if (color.length !== 6) return hex;
+
+  const value = Number.parseInt(color, 16);
+  const red = (value >> 16) & 0xff;
+  const green = (value >> 8) & 0xff;
+  const blue = value & 0xff;
+  const toChannel = (channel) =>
+    Math.round(channel + (255 - channel) * mix);
+
+  return `#${[toChannel(red), toChannel(green), toChannel(blue)]
+    .map((channel) => channel.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 function getCategoryStyle(valor, hovered = false) {
+  const baseColor = CATEGORY_COLORS[valor] || "#ddd";
+
   return {
+    stroke: true,
+    fill: true,
     color: "#FFFFFF",
     opacity: 1,
     weight: 1,
-    fillColor: CATEGORY_COLORS[valor] || "#ddd",
-    fillOpacity: hovered ? 0.9 : 0.75,
+    fillColor: hovered ? lightenColor(baseColor) : baseColor,
+    fillOpacity: 1,
     interactive: true,
   };
 }
 
 function getHiddenStyle() {
   return {
-    color: "#000",
+    stroke: true,
+    fill: true,
+    color: "#FFFFFF",
     opacity: 0,
     weight: 0,
+    fillColor: "#fafafa",
     fillOpacity: 0,
     interactive: false,
   };
@@ -152,8 +221,14 @@ function getReferenceStyle() {
 }
 
 function isLayerVisible(barrioData) {
+  const valor = Number(barrioData?.valor);
+  if (!Number.isFinite(valor)) return false;
+
   if (currentCategoryFilter === "all") return true;
-  return String(barrioData?.valor) === currentCategoryFilter;
+  if (currentCategoryFilter === "vulnerable") return valor >= 1 && valor <= 3;
+  if (currentCategoryFilter === "no-vulnerable") return valor >= 4 && valor <= 6;
+
+  return String(valor) === currentCategoryFilter;
 }
 
 function applyLayerStyle(layer, hovered = false) {
@@ -168,12 +243,24 @@ function applyLayerStyle(layer, hovered = false) {
 }
 
 function updateFilterUI() {
+  document.querySelectorAll(".filter-group-btn").forEach((button) => {
+    button.classList.toggle(
+      "is-active",
+      button.dataset.group === currentCategoryFilter
+    );
+  });
+
   document.querySelectorAll(".filter-chip").forEach((chip) => {
     chip.classList.toggle(
       "is-active",
       chip.dataset.category === currentCategoryFilter
     );
   });
+
+  document.getElementById("reset-filter")?.classList.toggle(
+    "is-active",
+    currentCategoryFilter !== "all"
+  );
 }
 
 function applyCategoryFilter() {
@@ -184,6 +271,7 @@ function applyCategoryFilter() {
   if (referenceLayerRef && mapRef) {
     if (currentCategoryFilter === "all") {
       mapRef.removeLayer(referenceLayerRef);
+      barriLayerRef.bringToFront();
     } else {
       if (!mapRef.hasLayer(referenceLayerRef)) {
         referenceLayerRef.addTo(mapRef);
@@ -195,6 +283,8 @@ function applyCategoryFilter() {
   barriLayerRef.eachLayer((layer) => {
     applyLayerStyle(layer);
   });
+
+  scheduleMapRefresh();
 }
 
 function buildCategoryFilter() {
@@ -205,9 +295,16 @@ function buildCategoryFilter() {
     const row = document.createElement("div");
     row.className = `filter-row ${group.className}`;
 
-    const label = document.createElement("div");
-    label.className = "filter-row-label";
-    label.textContent = group.label;
+    const label = document.createElement("button");
+    label.type = "button";
+    label.className = "filter-group-btn";
+    label.dataset.group = group.id;
+    label.innerHTML = `<span class="filter-group-btn-label">${group.label}</span>`;
+    label.addEventListener("click", () => {
+      currentCategoryFilter =
+        currentCategoryFilter === group.id ? "all" : group.id;
+      applyCategoryFilter();
+    });
     row.appendChild(label);
 
     group.items.forEach((item) => {
@@ -246,7 +343,11 @@ function buildPopupContent(nom, barrioData) {
     return `<strong>${nom}</strong><br><span class="popup-missing">Sin datos</span>`;
   }
 
-  return `<strong>${nom}</strong><br><span class="popup-category">${barrioData.categoria}</span>`;
+  const codigoHtml = barrioData.codigo
+    ? `<span class="popup-postal">${barrioData.codigo}</span><br>`
+    : "";
+
+  return `<strong>${nom}</strong><br>${codigoHtml}<span class="popup-category">${barrioData.categoria}</span>`;
 }
 
 function reprojectCoords(coords) {
@@ -338,7 +439,7 @@ function initMap() {
       return response.json();
     }),
     fetch(CSV_URL).then((response) => {
-      if (!response.ok) throw new Error("No se encontró datos.csv");
+      if (!response.ok) throw new Error("No se encontró datos2.csv");
       return response.text();
     }),
   ])
