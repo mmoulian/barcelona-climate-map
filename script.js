@@ -13,7 +13,7 @@ const CATEGORY_COLORS = {
 const FILTER_GROUPS = [
   {
     id: "vulnerable",
-    label: "Vulnerable:",
+    label: "Barrios vulnerables",
     className: "filter-row--vulnerable",
     items: [
       { valor: 1, label: "Alto estrés térmico" },
@@ -23,7 +23,7 @@ const FILTER_GROUPS = [
   },
   {
     id: "no-vulnerable",
-    label: "No vulnerable:",
+    label: "Barrios no vulnerables",
     className: "filter-row--no-vulnerable",
     items: [
       { valor: 4, label: "Alto estrés térmico" },

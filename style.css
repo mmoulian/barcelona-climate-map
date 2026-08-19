@@ -81,7 +81,7 @@ body {
   width: 100%;
   padding: 8px 20px;
   border-radius: 30px;
-  outline: 1px solid #e8e8e8;
+  outline: 1px solid #cccccc;
   outline-offset: -1px;
   background: #fafafa;
 }
@@ -133,7 +133,7 @@ body {
   font-weight: 400;
   letter-spacing: 0.18px;
   text-align: center;
-  width: 152px;
+  width: 220px;
   white-space: nowrap;
 }
 
@@ -342,7 +342,7 @@ body {
   }
 
   .filter-group-btn {
-    width: 140px;
+    width: 200px;
   }
 }
 
