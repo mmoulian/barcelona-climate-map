@@ -1,6 +1,6 @@
 :root {
   --layout-max-width: 100%;
-  --filter-max-width: 850px;
+  --filter-max-width: 100%;
   --page-gutter: 20px;
   --btn-hover-bg: #cfcfcf;
   --btn-active-bg: #757575;
@@ -376,10 +376,15 @@ body {
 }
 
 @media (min-width: 901px) {
+  #filter-panel {
+    max-width: none;
+    width: 100%;
+  }
+
   .filter-row {
     flex-wrap: nowrap;
     padding: 6px 16px;
-    gap: 12px;
+    gap: 10px;
   }
 
   .filter-dropdown-trigger {
@@ -387,16 +392,23 @@ body {
   }
 
   .filter-dropdown-menu {
-    gap: 12px;
+    flex-wrap: nowrap;
+    gap: 10px;
   }
 
   .filter-group-btn,
   .filter-chip {
-    padding: 6px 14px;
+    padding: 6px 12px;
   }
 
   .filter-group-btn {
-    width: 200px;
+    width: auto;
+    min-width: 180px;
+    flex: 0 0 auto;
+  }
+
+  .reset-filter {
+    margin: 10px 0 0;
   }
 }
 
@@ -501,30 +513,40 @@ body {
 
 @media (max-height: 700px) and (min-width: 901px) {
   #filter-panel {
-    padding-top: 8px;
+    padding-top: 6px;
   }
 
   #filter {
-    gap: 8px;
+    gap: 6px;
   }
 
   .filter-row {
-    padding: 6px 12px;
+    flex-wrap: nowrap;
+    padding: 5px 12px;
+  }
+
+  .filter-dropdown-menu {
+    flex-wrap: nowrap;
   }
 
   .filter-group-btn,
   .filter-chip {
-    padding: 6px 12px;
+    padding: 5px 10px;
   }
 
   .filter-group-btn {
-    width: 100%;
+    width: auto;
     min-width: 0;
+    flex: 0 0 auto;
   }
 
   .filter-chip-label,
   .filter-group-btn-label,
   .reset-filter-label {
     font-size: 13px;
+  }
+
+  .reset-filter {
+    margin: 8px 0 0;
   }
 }
