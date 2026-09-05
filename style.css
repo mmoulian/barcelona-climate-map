@@ -251,7 +251,7 @@ body {
 }
 
 .reset-filter {
-  margin: 20px 0 0;
+  margin: 8px 0 0;
   padding: 6px 10px;
   border: none;
   border-radius: 100px;
@@ -477,6 +477,62 @@ body {
   .filter-dropdown-trigger-label {
     white-space: nowrap;
     text-align: left;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 700px) {
+  #filter-panel {
+    padding-top: 6px;
+  }
+
+  #filter {
+    gap: 6px;
+  }
+
+  .filter-dropdown-trigger {
+    padding: 8px 14px;
+  }
+
+  .reset-filter {
+    margin: 6px 0 0;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --page-gutter: 12px;
+  }
+
+  #filter-panel {
+    padding-top: 6px;
+  }
+
+  #filter {
+    gap: 6px;
+  }
+
+  .filter-dropdown-trigger {
+    padding: 8px 12px;
+  }
+
+  .reset-filter {
+    margin: 6px 0 0;
+  }
+
+  .reset-filter-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .filter-chip-label,
+  .filter-group-btn-label,
+  .filter-dropdown-trigger-label,
+  .reset-filter-label {
+    font-size: 14px;
+  }
+
+  #main {
+    padding-bottom: 0;
   }
 }
 

@@ -500,11 +500,24 @@ function hideLoading() {
   document.getElementById("loading").classList.add("hidden");
 }
 
+function getMapFitPadding() {
+  const mapHeight = document.getElementById("map")?.clientHeight || window.innerHeight;
+  const narrow = window.innerWidth <= 600;
+  const short = mapHeight < 360;
+
+  if (narrow || short) return [8, 8];
+  if (window.innerWidth <= 900) return [12, 12];
+  return [20, 20];
+}
+
 function refreshMapLayout() {
   if (!mapRef || !barriLayerRef) return;
 
-  mapRef.invalidateSize();
-  mapRef.fitBounds(barriLayerRef.getBounds(), { padding: [20, 20] });
+  mapRef.invalidateSize({ animate: false });
+  mapRef.fitBounds(barriLayerRef.getBounds(), {
+    padding: getMapFitPadding(),
+    animate: false,
+  });
 }
 
 function scheduleMapRefresh() {
