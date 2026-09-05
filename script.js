@@ -242,6 +242,65 @@ function applyLayerStyle(layer, hovered = false) {
   layer.setStyle(getCategoryStyle(barrioData?.valor, hovered));
 }
 
+function isMobileFilterLayout() {
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll(".filter-row.is-open").forEach((row) => {
+    row.classList.remove("is-open");
+    row
+      .querySelector(".filter-dropdown-trigger")
+      ?.setAttribute("aria-expanded", "false");
+  });
+}
+
+function toggleDropdown(row) {
+  const trigger = row.querySelector(".filter-dropdown-trigger");
+  const willOpen = !row.classList.contains("is-open");
+
+  closeAllDropdowns();
+
+  if (willOpen) {
+    row.classList.add("is-open");
+    trigger?.setAttribute("aria-expanded", "true");
+  }
+
+  scheduleMapRefresh();
+}
+
+function updateDropdownTriggers() {
+  FILTER_GROUPS.forEach((group) => {
+    const row = document.querySelector(`.filter-row.${group.className}`);
+    const trigger = row?.querySelector(".filter-dropdown-trigger");
+    if (!trigger) return;
+
+    const selectedItem = group.items.find(
+      (item) => String(item.valor) === currentCategoryFilter
+    );
+    const isActive =
+      currentCategoryFilter === group.id || Boolean(selectedItem);
+    const label = trigger.querySelector(".filter-dropdown-trigger-label");
+    const dot = trigger.querySelector(".filter-dropdown-trigger-dot");
+
+    trigger.classList.toggle("is-active", isActive);
+
+    if (label) {
+      label.textContent = selectedItem ? selectedItem.label : group.label;
+    }
+
+    if (dot) {
+      if (selectedItem) {
+        dot.hidden = false;
+        dot.style.background = CATEGORY_COLORS[selectedItem.valor];
+      } else {
+        dot.hidden = true;
+        dot.style.background = "";
+      }
+    }
+  });
+}
+
 function updateFilterUI() {
   document.querySelectorAll(".filter-group-btn").forEach((button) => {
     button.classList.toggle(
@@ -256,6 +315,8 @@ function updateFilterUI() {
       chip.dataset.category === currentCategoryFilter
     );
   });
+
+  updateDropdownTriggers();
 
   document.getElementById("reset-filter")?.classList.toggle(
     "is-active",
@@ -287,6 +348,17 @@ function applyCategoryFilter() {
   scheduleMapRefresh();
 }
 
+function selectCategoryFilter(nextFilter) {
+  currentCategoryFilter =
+    currentCategoryFilter === nextFilter ? "all" : nextFilter;
+  applyCategoryFilter();
+
+  if (isMobileFilterLayout()) {
+    closeAllDropdowns();
+    scheduleMapRefresh();
+  }
+}
+
 function buildCategoryFilter() {
   const filter = document.getElementById("filter");
   filter.innerHTML = "";
@@ -295,17 +367,41 @@ function buildCategoryFilter() {
     const row = document.createElement("div");
     row.className = `filter-row ${group.className}`;
 
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "filter-dropdown-trigger";
+    trigger.dataset.group = group.id;
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-controls", `filter-menu-${group.id}`);
+    trigger.innerHTML = `
+      <span class="filter-dropdown-trigger-main">
+        <span class="filter-chip-dot filter-dropdown-trigger-dot" hidden></span>
+        <span class="filter-dropdown-trigger-label">${group.label}</span>
+      </span>
+      <span class="filter-dropdown-chevron" aria-hidden="true"></span>
+    `;
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleDropdown(row);
+    });
+    row.appendChild(trigger);
+
+    const menu = document.createElement("div");
+    menu.className = "filter-dropdown-menu";
+    menu.id = `filter-menu-${group.id}`;
+
     const label = document.createElement("button");
     label.type = "button";
     label.className = "filter-group-btn";
     label.dataset.group = group.id;
-    label.innerHTML = `<span class="filter-group-btn-label">${group.label}</span>`;
+    label.innerHTML = `
+      <span class="filter-group-btn-label label-desktop">${group.label}</span>
+      <span class="filter-group-btn-label label-mobile">Todos</span>
+    `;
     label.addEventListener("click", () => {
-      currentCategoryFilter =
-        currentCategoryFilter === group.id ? "all" : group.id;
-      applyCategoryFilter();
+      selectCategoryFilter(group.id);
     });
-    row.appendChild(label);
+    menu.appendChild(label);
 
     group.items.forEach((item) => {
       const chip = document.createElement("button");
@@ -318,15 +414,13 @@ function buildCategoryFilter() {
       `;
 
       chip.addEventListener("click", () => {
-        const category = String(item.valor);
-        currentCategoryFilter =
-          currentCategoryFilter === category ? "all" : category;
-        applyCategoryFilter();
+        selectCategoryFilter(String(item.valor));
       });
 
-      row.appendChild(chip);
+      menu.appendChild(chip);
     });
 
+    row.appendChild(menu);
     filter.appendChild(row);
   });
 }
@@ -334,8 +428,33 @@ function buildCategoryFilter() {
 function initResetFilter() {
   document.getElementById("reset-filter").addEventListener("click", () => {
     currentCategoryFilter = "all";
+    closeAllDropdowns();
     applyCategoryFilter();
   });
+}
+
+function initFilterDropdowns() {
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".filter-row")) return;
+    if (!document.querySelector(".filter-row.is-open")) return;
+    closeAllDropdowns();
+    scheduleMapRefresh();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!document.querySelector(".filter-row.is-open")) return;
+    closeAllDropdowns();
+    scheduleMapRefresh();
+  });
+
+  window
+    .matchMedia("(max-width: 900px)")
+    .addEventListener("change", (event) => {
+      if (event.matches) return;
+      closeAllDropdowns();
+      scheduleMapRefresh();
+    });
 }
 
 function buildPopupContent(nom, barrioData) {
@@ -449,6 +568,7 @@ function initMap() {
 
       buildCategoryFilter();
       initResetFilter();
+      initFilterDropdowns();
 
       referenceLayerRef = L.geoJSON(barriPolygons, {
         style: getReferenceStyle,
