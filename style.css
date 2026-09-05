@@ -1,6 +1,6 @@
 :root {
   --layout-max-width: 100%;
-  --filter-max-width: 100%;
+  --filter-max-width: 900px;
   --page-gutter: 20px;
   --btn-hover-bg: #cfcfcf;
   --btn-active-bg: #757575;
@@ -377,7 +377,7 @@ body {
 
 @media (min-width: 901px) {
   #filter-panel {
-    max-width: none;
+    max-width: var(--filter-max-width);
     width: 100%;
   }
 
