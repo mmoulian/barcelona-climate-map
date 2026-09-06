@@ -510,14 +510,28 @@ function getMapFitPadding() {
   return [20, 20];
 }
 
+function fitBoundsTopAligned(bounds) {
+  const padding = getMapFitPadding()[0];
+  const size = mapRef.getSize();
+  const zoom = mapRef.getBoundsZoom(bounds, false, L.point(padding, padding));
+  const northWest = mapRef.project(bounds.getNorthWest(), zoom);
+  const southEast = mapRef.project(bounds.getSouthEast(), zoom);
+  const layerHeight = southEast.y - northWest.y;
+  const extraY = size.y - layerHeight;
+  const center = northWest.add(southEast).multiplyBy(0.5);
+
+  if (window.innerWidth <= 900 && extraY > padding * 2) {
+    center.y += extraY / 2 - padding;
+  }
+
+  mapRef.setView(mapRef.unproject(center, zoom), zoom, { animate: false });
+}
+
 function refreshMapLayout() {
   if (!mapRef || !barriLayerRef) return;
 
   mapRef.invalidateSize({ animate: false });
-  mapRef.fitBounds(barriLayerRef.getBounds(), {
-    padding: getMapFitPadding(),
-    animate: false,
-  });
+  fitBoundsTopAligned(barriLayerRef.getBounds());
 }
 
 function scheduleMapRefresh() {
